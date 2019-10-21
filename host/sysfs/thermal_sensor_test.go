@@ -56,9 +56,6 @@ func TestThermalSensor_fail(t *testing.T) {
 	if err := d.Sense(&e); err == nil || err.Error() != "sysfs-thermal: file I/O is inhibited" {
 		t.Fatal("should have failed")
 	}
-	if _, err := d.SenseContinuous(time.Second); err == nil || err.Error() != "sysfs-thermal: not implemented" {
-		t.Fatal(err)
-	}
 }
 
 func TestThermalSensor_Type_success(t *testing.T) {
@@ -75,8 +72,28 @@ func TestThermalSensor_Type_success(t *testing.T) {
 			return nil, errors.New("unknown file")
 		}
 	}
-	d := ThermalSensor{name: "cpu", root: "//\000/"}
+	d := ThermalSensor{name: "cpu", root: "//\000/", typeFilename: "type"}
 	if s := d.Type(); s != "dummy" {
+		t.Fatal(s)
+	}
+}
+
+func TestThermalSensor_Type_NotFoundIsUnknown(t *testing.T) {
+	defer resetThermal()
+	fileIOOpen = func(path string, flag int) (fileIO, error) {
+		if flag != os.O_RDONLY {
+			t.Fatal(flag)
+		}
+		switch path {
+		case "//\x00/type":
+			return nil, os.ErrNotExist
+		default:
+			t.Fatalf("unknown %q", path)
+			return nil, errors.New("unknown file")
+		}
+	}
+	d := ThermalSensor{name: "cpu", root: "//\000/", typeFilename: "type"}
+	if s := d.Type(); s != "<unknown>" {
 		t.Fatal(s)
 	}
 }
@@ -95,7 +112,7 @@ func TestThermalSensor_Type_fail_1(t *testing.T) {
 			return nil, errors.New("unknown file")
 		}
 	}
-	d := ThermalSensor{name: "cpu", root: "//\000/"}
+	d := ThermalSensor{name: "cpu", root: "//\000/", typeFilename: "type"}
 	if s := d.Type(); s != "sysfs-thermal: not implemented" {
 		t.Fatal(s)
 	}
@@ -115,7 +132,7 @@ func TestThermalSensor_Type_fail_2(t *testing.T) {
 			return nil, errors.New("unknown file")
 		}
 	}
-	d := ThermalSensor{name: "cpu", root: "//\000/"}
+	d := ThermalSensor{name: "cpu", root: "//\000/", typeFilename: "type"}
 	if s := d.Type(); s != "<unknown>" {
 		t.Fatal(s)
 	}
@@ -135,7 +152,7 @@ func TestThermalSensor_Sense_success(t *testing.T) {
 			return nil, errors.New("unknown file")
 		}
 	}
-	d := ThermalSensor{name: "cpu", root: "//\000/"}
+	d := ThermalSensor{name: "cpu", root: "//\000/", sensorFilename: "temp"}
 	e := physic.Env{}
 	if err := d.Sense(&e); err != nil {
 		t.Fatal(err)
@@ -159,7 +176,7 @@ func TestThermalSensor_Sense_fail_1(t *testing.T) {
 			return nil, errors.New("unknown file")
 		}
 	}
-	d := ThermalSensor{name: "cpu", root: "//\000/"}
+	d := ThermalSensor{name: "cpu", root: "//\000/", sensorFilename: "temp"}
 	e := physic.Env{}
 	if err := d.Sense(&e); err == nil || err.Error() != "sysfs-thermal: not implemented" {
 		t.Fatal(err)
@@ -180,7 +197,7 @@ func TestThermalSensor_Sense_fail_2(t *testing.T) {
 			return nil, errors.New("unknown file")
 		}
 	}
-	d := ThermalSensor{name: "cpu", root: "//\000/"}
+	d := ThermalSensor{name: "cpu", root: "//\000/", sensorFilename: "temp"}
 	e := physic.Env{}
 	if err := d.Sense(&e); err == nil || err.Error() != "sysfs-thermal: failed to read temperature" {
 		t.Fatal(err)
@@ -201,7 +218,7 @@ func TestThermalSensor_Sense_fail_3(t *testing.T) {
 			return nil, errors.New("unknown file")
 		}
 	}
-	d := ThermalSensor{name: "cpu", root: "//\000/"}
+	d := ThermalSensor{name: "cpu", root: "//\000/", sensorFilename: "temp"}
 	e := physic.Env{}
 	err := d.Sense(&e)
 	if err == nil {
@@ -231,7 +248,7 @@ func TestThermalSensor_Precision_Kelvin(t *testing.T) {
 			return nil, errors.New("unknown file")
 		}
 	}
-	d := ThermalSensor{name: "cpu", root: "//\000/"}
+	d := ThermalSensor{name: "cpu", root: "//\000/", sensorFilename: "temp"}
 	e := physic.Env{}
 	d.Precision(&e)
 	if e.Temperature != physic.Kelvin {
@@ -253,10 +270,49 @@ func TestThermalSensor_Precision_MilliKelvin(t *testing.T) {
 			return nil, errors.New("unknown file")
 		}
 	}
-	d := ThermalSensor{name: "cpu", root: "//\000/"}
+	d := ThermalSensor{name: "cpu", root: "//\000/", sensorFilename: "temp"}
 	e := physic.Env{}
 	d.Precision(&e)
 	if e.Temperature != physic.MilliKelvin {
+		t.Fatal(e.Temperature)
+	}
+}
+
+func TestThermalSensor_SenseContinuous_success(t *testing.T) {
+	defer resetThermal()
+	fileIOOpen = func(path string, flag int) (fileIO, error) {
+		if flag != os.O_RDONLY {
+			t.Fatal(flag)
+		}
+		switch path {
+		case "//\x00/temp":
+			return &fileRead{t: t, ops: [][]byte{
+				[]byte("42\n"),
+				[]byte("43\n"),
+				[]byte("44\n"),
+				[]byte("45\n"), // In case there's a read after the test finishes.
+			}}, nil
+		default:
+			t.Fatalf("unknown %q", path)
+			return nil, errors.New("unknown file")
+		}
+	}
+	d := ThermalSensor{name: "cpu", root: "//\000/", sensorFilename: "temp"}
+	ch, err := d.SenseContinuous(time.Nanosecond)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer d.Halt()
+	e := <-ch
+	if e.Temperature != 42*physic.Celsius+physic.ZeroCelsius {
+		t.Fatal(e.Temperature)
+	}
+	e = <-ch
+	if e.Temperature != 43*physic.Celsius+physic.ZeroCelsius {
+		t.Fatal(e.Temperature)
+	}
+	e = <-ch
+	if e.Temperature != 44*physic.Celsius+physic.ZeroCelsius {
 		t.Fatal(e.Temperature)
 	}
 }

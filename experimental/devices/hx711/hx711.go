@@ -16,13 +16,14 @@ import (
 	"time"
 
 	"periph.io/x/periph/conn/gpio"
+	"periph.io/x/periph/conn/pin"
 	"periph.io/x/periph/experimental/conn/analog"
 )
 
 var (
-	// TimeoutError is returned from Read and ReadAveraged when the ADC took too
+	// ErrTimeout is returned from Read and ReadAveraged when the ADC took too
 	// long to indicate data was available.
-	TimeoutError = errors.New("timed out waiting for HX711 to become ready")
+	ErrTimeout = errors.New("timed out waiting for HX711 to become ready")
 )
 
 // InputMode controls the voltage gain and the channel multiplexer on the HX711.
@@ -30,6 +31,7 @@ var (
 // with a gain of 32.
 type InputMode int
 
+// Valid InputMode.
 const (
 	CHANNEL_A_GAIN_128 InputMode = 1
 	CHANNEL_A_GAIN_64  InputMode = 3
@@ -86,7 +88,25 @@ func (d *Dev) Number() int {
 
 // Function implements analog.PinADC.
 func (d *Dev) Function() string {
-	return "ADC"
+	return string(d.Func())
+}
+
+// Func implements analog.PinADC.
+func (d *Dev) Func() pin.Func {
+	return analog.ADC
+}
+
+// SupportedFuncs implements analog.PinADC.
+func (d *Dev) SupportedFuncs() []pin.Func {
+	return []pin.Func{analog.ADC}
+}
+
+// SetFunc implements analog.PinADC.
+func (d *Dev) SetFunc(f pin.Func) error {
+	if f == analog.ADC {
+		return nil
+	}
+	return errors.New("pin function cannot be changed")
 }
 
 // SetInputMode changes the voltage gain and channel multiplexer mode.
@@ -168,14 +188,14 @@ func (d *Dev) IsReady() bool {
 //
 // It blocks until the ADC indicates there is data ready for retrieval. If the
 // ADC doesn't pull its Data pin low to indicate there is data ready before the
-// timeout is reached, TimeoutError is returned.
+// timeout is reached, ErrTimeout is returned.
 func (d *Dev) ReadTimeout(timeout time.Duration) (int32, error) {
 	// Wait for the falling edge that indicates the ADC has data.
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	if !d.IsReady() {
 		if !d.data.WaitForEdge(timeout) {
-			return 0, TimeoutError
+			return 0, ErrTimeout
 		}
 	}
 	return d.readRaw()

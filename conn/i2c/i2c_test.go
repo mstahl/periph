@@ -104,3 +104,44 @@ func (f *fakeBus) SetSpeed(freq physic.Frequency) error {
 	f.freq = freq
 	return f.err
 }
+
+func TestAddr_Set(t *testing.T) {
+	tests := []struct {
+		str  string
+		want Addr
+		err  error
+	}{
+		{"0x18", 0x18, nil},
+		{"24", 24, nil},
+		{"0x3ff", 0x3ff, nil},
+		{"0x400", 0, errI2CSetError},
+		{"-1", 0, errI2CSetError},
+	}
+
+	for _, tt := range tests {
+		var a Addr
+		if err := a.Set(tt.str); err != tt.err {
+			t.Errorf("i2cAddr.Set(%s) error %v", tt.str, err)
+		}
+		if tt.err == nil && a != tt.want {
+			t.Errorf("i2cAddr.Set(%s) expected %d but got %d", tt.str, tt.want, a)
+		}
+	}
+}
+
+func TestAddr_String(t *testing.T) {
+	tests := []struct {
+		Addr Addr
+		want string
+	}{
+		{0x01, "0x1"},
+		{0x24, "0x24"},
+		{0x3ff, "0x3ff"},
+	}
+
+	for _, tt := range tests {
+		if got := tt.Addr.String(); got != tt.want {
+			t.Errorf("i2cAddr.String() expected %s but got %s", tt.want, got)
+		}
+	}
+}

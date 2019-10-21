@@ -1,5 +1,8 @@
 package reg
 
+// Unsorted mix of register addresses, commands and constants.
+//
+// TODO(maruel): Needs to be redone.
 const (
 	MPU9250_DEFAULT_ADDRESS     = 0xD1
 	MPU9250_ALT_DEFAULT_ADDRESS = 0xD2
@@ -114,9 +117,9 @@ const (
 	MPU9250_ZA_OFFSET_L = 0x7E
 
 	//reset values
-	WHOAMI_RESET_VAL            = 0x71
-	POWER_MANAGMENT_1_RESET_VAL = 0x01
-	DEFAULT_RESET_VALUE         = 0x00
+	WHOAMI_RESET_VAL             = 0x71
+	POWER_MANAGEMENT_1_RESET_VAL = 0x01
+	DEFAULT_RESET_VALUE          = 0x00
 
 	WHOAMI_DEFAULT_VAL = 0x68
 

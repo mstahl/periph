@@ -243,7 +243,7 @@ func (p *Pin) Function() string {
 func (p *Pin) Func() pin.Func {
 	if drvGPIO.gpioMemory == nil {
 		if p.sysfsPin == nil {
-			return pin.Func("ERR")
+			return pin.FuncNone
 		}
 		return p.sysfsPin.Func()
 	}
@@ -289,7 +289,7 @@ func (p *Pin) Func() pin.Func {
 		}
 		return pin.Func("ALT5")
 	default:
-		return pin.Func("ERR")
+		return pin.FuncNone
 	}
 }
 
@@ -1255,7 +1255,7 @@ func (d *driverGPIO) Init() (bool, error) {
 			return true, err
 		}
 		switch f := cpuPins[i].Func(); f {
-		case gpio.IN, gpio.OUT:
+		case gpio.IN, gpio.OUT, gpio.IN_LOW, gpio.IN_HIGH, gpio.OUT_LOW, gpio.OUT_HIGH, pin.FuncNone:
 		default:
 			// Registering the same alias twice fails. This can happen if two pins
 			// are configured with the same function. For example both pin #12, #18
