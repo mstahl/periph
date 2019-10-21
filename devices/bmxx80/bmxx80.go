@@ -207,6 +207,7 @@ type Dev struct {
 	d         conn.Conn
 	isSPI     bool
 	is280     bool
+	is680     bool
 	isBME     bool
 	opts      Opts
 	measDelay time.Duration
@@ -249,6 +250,11 @@ func (d *Dev) Sense(e *physic.Env) error {
 				return d.wrap(err)
 			}
 		}
+
+		if d.is680 {
+			return d.sense680(e)
+		}
+
 		return d.sense280(e)
 	}
 	return d.sense180(e)
@@ -363,6 +369,11 @@ func (d *Dev) makeDev(opts *Opts) error {
 	case 0x60:
 		d.name = "BME280"
 		d.is280 = true
+		d.isBME = true
+	case 0x61:
+		d.name = "BME680"
+		d.is280 = true
+		d.is680 = true
 		d.isBME = true
 	default:
 		return fmt.Errorf("bmxx80: unexpected chip id %x", chipID[0])
