@@ -30,7 +30,11 @@ func main() {
 
 	// Open a handle to a bme280/bmp280 connected on the I²C bus using default
 	// settings:
-	dev, err := bmxx80.NewI2C(bus, bme680Address, &bmxx80.DefaultOpts)
+	dev, err := bmxx80.NewI2C(bus, bme680Address, &bmxx80.Opts{
+		Temperature: bmxx80.O8x,
+		Humidity:    bmxx80.O1x,
+		Pressure:    bmxx80.O1x,
+	})
 	if err != nil {
 		log.Fatal("Error initializing bmxx80 driver", err)
 	}
