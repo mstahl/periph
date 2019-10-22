@@ -7,6 +7,25 @@ import (
 	"periph.io/x/periph/conn/physic"
 )
 
+// GasTemp represents a temperature setting for the BME680 gas sensor's heater.
+// These are set using a multiplier and a value, and the temperature setting is
+// the product of these.
+type GasTemp uint8
+
+// Use these multipliers for setting temperatures for the gas sensor.
+const (
+	GTx1  uint8 = 0x0
+	GTx4  uint8 = 0x1
+	GTx16 uint8 = 0x2
+	GTx64 uint8 = 0x3
+)
+
+func (g GasTempSetPoint) Int() {
+}
+
+func (g GasTempSetPoint) String() {
+}
+
 // configureHeater680 sets the heating duration and temperature for the gas
 // sensor.
 //
