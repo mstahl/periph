@@ -1,12 +1,19 @@
 package bmxx80
 
 import (
+	"fmt"
 	"time"
 
 	"periph.io/x/periph/conn/physic"
 )
 
-type GasWait time.Duration
+// configureHeater680 sets the heating duration and temperature for the gas
+// sensor.
+//
+// It must be called with d.mu lock held.
+func (d *Dev) configureHeater680(gasWait time.Duration, gasTemp physic.Temperature) error {
+	return nil
+}
 
 // sense680 reads the device's registers for bme680
 //
@@ -27,9 +34,13 @@ func (d *Dev) sense680(e *physic.Env) error {
 	// These values are 20 bits as per doc.
 	pRaw := int32(buf[0])<<12 | int32(buf[1])<<4 | int32(buf[2])>>4
 	tRaw := int32(buf[3])<<12 | int32(buf[4])<<4 | int32(buf[5])>>4
+
+	fmt.Println("raw temperature:", tRaw)
 	// TODO: Also need to read `gas_r` register here
 
 	t, tFine := d.cal280.compensateTempInt(tRaw)
+	fmt.Println("t = ", t, "tFine = ", tFine)
+
 	// Convert CentiCelsius to Kelvin.
 	e.Temperature = physic.Temperature(t)*10*physic.MilliCelsius + physic.ZeroCelsius
 
